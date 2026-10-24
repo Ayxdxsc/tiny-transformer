@@ -1,6 +1,0 @@
-tiny
-*.ckpt
-*.bin
-*.txt
-*.o
-build/

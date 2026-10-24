@@ -16,7 +16,7 @@ jobs:
     - name: Compile Tiny (macOS ARM64 Native)
       run: |
         # Mac 原生 Clang 编译器，开启 NEON 和点乘加速
-        clang++ -O3 -march=armv8.2-a+dotprod -ffast-math -fno-math-errno -funroll-loops -fomit-frame-pointer -fno-exceptions -fno-rtti -o tiny tiny.cpp
+        clang++ -O3 -ffast-math -fno-math-errno -funroll-loops -fomit-frame-pointer -fno-exceptions -fno-rtti -o tiny tiny.cpp
         
     - name: Train
       run: |

@@ -32,13 +32,13 @@ jobs:
                   -fomit-frame-pointer -fno-exceptions -fno-rtti -pthread \
                   -o tiny_mac tiny.cpp
                   
-      - name: 运行训练 (榨干 M 芯片)
+      - name: 运行训练 (疯狂炼丹模式)
         run: |
-          echo "=== 启动 M-Series 榨汁机 ==="
-          # 假设你根目录有 tiny.cfg，如果没有，请把参数写死在命令里
-          # 这里我们指定数据目录为刚生成的 calc-data
+          echo "=== 启动 M-Series 炼丹炉 ==="
+          # 我们直接跑 50 轮！
+          # 如果 train loss 降到了 0.001（几乎全对），它会触发早停，提前收工。
           ./tiny_mac --mode train --data-dir calc-data --sort-by name --data-exts .txt \
-                     --model tiny.bin --ckpt model.ckpt --epochs 1 \
+                     --model tiny.bin --ckpt model.ckpt --epochs 50 --stop-loss 0.001 \
                      --batch-size 4 --ctx 64 --D 64 --L 2 --train-threads 4
       - name: 测试推理结果
         run: |

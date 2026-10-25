@@ -1,31 +1,37 @@
-name: Build and Train (macOS ARM64)
-on: [push, workflow_dispatch]
+name: Mac M-Series Extreme Test
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
-  train:
-    runs-on: macos-14  # 白嫖 Apple Silicon M1
+  test-mac-arm:
+    # 使用 GitHub 提供的 macOS runner (目前是 M1 芯片)
+    runs-on: macos-latest
+    
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.10'
-        
-    - name: Generate Data
-      run: python3 train.py
+      - uses: actions/checkout@v4
       
-    - name: Compile Tiny (macOS ARM64 Native)
-      run: |
-        # Mac 原生 Clang 编译器，开启 NEON 和点乘加速
-        clang++ -O3 -std=c++17 -ffast-math -fno-math-errno -funroll-loops -fomit-frame-pointer -fno-exceptions -fno-rtti -o tiny tiny.cpp
-        
-    - name: Train
-      run: |
-        ./tiny --mode train --data-dir calc-data --sort-by name --data-exts .txt --model tiny.bin --ckpt model.ckpt --config tiny.cfg
-        
-    - name: Upload Model
-      uses: actions/upload-artifact@v4
-      with:
-        name: calc-model-arm64
-        path: |
-          tiny.bin.best
-          model.ckpt.best
+      - name: 检查环境与芯片信息
+        run: |
+          sysctl -n machdep.cpu.brand_string
+          echo "=== 查看系统架构 ==="
+          uname -m
+
+      - name: 生成训练数据
+        run: |
+          python3 gen_data.py  # 假设你刚刚建了这个脚本
+          
+      - name: 编译 (利用 Apple Silicon 的 NEON)
+        run: |
+          # macOS 使用自带的 clang++，不需要指定 -march=armv8.2-a，直接 native 即可
+          clang++ -O3 -mcpu=native -ffast-math -fno-math-errno -funroll-loops \
+                  -fomit-frame-pointer -fno-exceptions -fno-rtti -pthread \
+                  -o tiny_mac tiny.cpp
+                  
+      - name: 运行训练 (榨干 M 芯片)
+        run: |
+          echo "=== 启动 M-Series 榨汁机 ==="
+          # M1 通常有 8 个核心 (4大4小)，我们开 4 个线程跑
+          ./tiny_mac --mode train --data data.txt --epochs 1 --batch-size 4 --ctx 64 --D 64 --L 2 --train-threads 4

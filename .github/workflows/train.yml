@@ -21,7 +21,7 @@ jobs:
 
       - name: 生成训练数据
         run: |
-          python3 gen_data.py  # 假设你刚刚建了这个脚本
+          python3 train.py  # 假设你刚刚建了这个脚本
           
       - name: 编译 (利用 Apple Silicon 的 NEON)
         run: |

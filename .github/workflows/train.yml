@@ -7,7 +7,6 @@ on:
 
 jobs:
   test-mac-arm:
-    # 使用 GitHub 提供的 macOS runner (目前是 M1 芯片)
     runs-on: macos-latest
     
     steps:
@@ -16,22 +15,28 @@ jobs:
       - name: 检查环境与芯片信息
         run: |
           sysctl -n machdep.cpu.brand_string
-          echo "=== 查看系统架构 ==="
+          echo "=== 系统架构 ==="
           uname -m
 
       - name: 生成训练数据
         run: |
-          python3 train.py  # 假设你刚刚建了这个脚本
-          
-      - name: 编译 (利用 Apple Silicon 的 NEON)
+          # 跑你的神仙脚本，生成 calc-data 文件夹
+          python3 train.py 
+          echo "=== 生成的文件列表 ==="
+          ls -lh calc-data/
+
+      - name: 编译 (针对 Apple M1 原生指令集优化)
         run: |
-          # macOS 使用自带的 clang++，不需要指定 -march=armv8.2-a，直接 native 即可
-          clang++ -O3 -mcpu=native -ffast-math -fno-math-errno -funroll-loops \
+          # 强制使用 apple-m1 目标，开启极速编译
+          clang++ -O3 -target arm64-apple-macos11 -mcpu=apple-m1 -ffast-math -fno-math-errno -funroll-loops \
                   -fomit-frame-pointer -fno-exceptions -fno-rtti -pthread \
                   -o tiny_mac tiny.cpp
                   
       - name: 运行训练 (榨干 M 芯片)
         run: |
           echo "=== 启动 M-Series 榨汁机 ==="
-          # M1 通常有 8 个核心 (4大4小)，我们开 4 个线程跑
-          ./tiny_mac --mode train --data data.txt --epochs 1 --batch-size 4 --ctx 64 --D 64 --L 2 --train-threads 4
+          # 假设你根目录有 tiny.cfg，如果没有，请把参数写死在命令里
+          # 这里我们指定数据目录为刚生成的 calc-data
+          ./tiny_mac --mode train --data-dir calc-data --sort-by name --data-exts .txt \
+                     --model tiny.bin --ckpt model.ckpt --epochs 1 \
+                     --batch-size 4 --ctx 64 --D 64 --L 2 --train-threads 4

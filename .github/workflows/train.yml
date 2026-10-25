@@ -40,3 +40,17 @@ jobs:
           ./tiny_mac --mode train --data-dir calc-data --sort-by name --data-exts .txt \
                      --model tiny.bin --ckpt model.ckpt --epochs 1 \
                      --batch-size 4 --ctx 64 --D 64 --L 2 --train-threads 4
+      - name: 测试推理结果
+        run: |
+          echo "=== 抽考：测试刚炼出来的模型 ==="
+          ./tiny_mac --mode gen --model tiny.bin -p "12+34=" --greedy
+          ./tiny_mac --mode gen --model tiny.bin -p "8*9=" --greedy
+
+      - name: 上传模型文件 (Artifacts)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tiny-model-m1
+          path: |
+            tiny.bin
+            model.ckpt
+          retention-days: 5

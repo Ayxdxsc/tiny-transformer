@@ -1,1 +1,57 @@
+name: Train Mod 97 Grokking
 
+# 这里就是开启手动触发的关键！
+on:
+  workflow_dispatch:
+
+jobs:
+  train:
+    runs-on: macos-14
+    
+    steps:
+      - name: 1. 检出代码
+        uses: actions/checkout@v4
+
+      - name: 2. 编译 C++ 引擎
+        run: |
+          echo "开始编译..."
+          clang++ -O3 -flto -mcpu=apple-m1 -ffast-math -funroll-loops -pthread -o tiny tiny.cpp
+          echo "编译成功！"
+
+      - name: 3. 检查数据文件
+        run: |
+          ls -l train.txt test.txt
+          echo "训练集行数: $(wc -l < train.txt)"
+          echo "测试集行数: $(wc -l < test.txt)"
+
+      - name: 4. 启动炼丹 (Mod 97)
+        run: |
+          # 跑 5 万步，保存控制台日志，并存入 ckpt
+          ./tiny --mode train \
+            --data train.txt \
+            --val-data test.txt \
+            --model mod97_grok.bin \
+            --ckpt mod97_grok.ckpt \
+            --D 128 --L 2 --df 512 --ctx 32 \
+            --nq 4 --nkv 2 \
+            --epochs 50000 \
+            --lr 1e-3 --min-lr 1e-3 \
+            --lr-schedule linear \
+            --weight-decay 1.0 \
+            --dropout 0.0 \
+            --grad-accum 128 \
+            --grad-clip 1.0 \
+            --ckpt-interval 5000 \
+            --seed 42 | tee train_log.txt
+
+      - name: 5. 保存训练成果 (模型和日志)
+        uses: actions/upload-artifact@v4
+        if: always() # 哪怕中途失败了也把日志传上来
+        with:
+          name: grokking-results
+          path: |
+            train_log.txt
+            mod97_grok.bin
+            mod97_grok.ckpt
+            mod97_grok.bin.best
+          retention-days: 7
